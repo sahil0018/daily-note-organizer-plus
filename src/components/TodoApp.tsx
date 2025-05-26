@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, User, Camera, Clock, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -105,11 +104,16 @@ const TodoApp = () => {
     setDraggedTask(null);
   };
 
-  // Filter tasks
+  // Filter tasks with debugging
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    console.log('Filtering task:', task.title, 'Search term:', searchTerm);
+    
+    const matchesSearch = searchTerm === '' || 
+                         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          task.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    console.log('Search match for', task.title, ':', matchesSearch);
     
     const matchesStatus = filterStatus === 'all' || 
                          (filterStatus === 'completed' && task.completed) ||
@@ -119,8 +123,13 @@ const TodoApp = () => {
     
     const matchesCategory = filterCategory === 'all' || task.category === filterCategory;
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+    const finalMatch = matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+    console.log('Final match for', task.title, ':', finalMatch);
+
+    return finalMatch;
   });
+
+  console.log('Total tasks:', tasks.length, 'Filtered tasks:', filteredTasks.length, 'Search term:', searchTerm);
 
   // Get unique categories
   const categories = Array.from(new Set(tasks.map(task => task.category).filter(Boolean)));
@@ -186,7 +195,10 @@ const TodoApp = () => {
               <Input
                 placeholder="Search tasks, descriptions, or tags..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  console.log('Search input changed to:', e.target.value);
+                  setSearchTerm(e.target.value);
+                }}
                 className="pl-10"
               />
             </div>
