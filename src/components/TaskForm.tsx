@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { X, Camera, Plus, Calendar, User, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,7 @@ interface TaskFormProps {
 const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
-  const [priority, setPriority] = useState(task?.priority || 'medium');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(task?.priority || 'medium');
   const [category, setCategory] = useState(task?.category || '');
   const [dueDate, setDueDate] = useState(task?.dueDate || '');
   const [createdBy, setCreatedBy] = useState(task?.createdBy || 'You');
@@ -129,7 +128,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="priority">Priority</Label>
-              <Select value={priority} onValueChange={setPriority}>
+              <Select value={priority} onValueChange={(value) => setPriority(value as 'low' | 'medium' | 'high')}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
