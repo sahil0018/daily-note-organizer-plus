@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Check, Edit, Trash, Clock, User, Calendar, Star, Camera, Tag, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,7 +30,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onDrop,
 }) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerStart, setTimerStart] = useState<number | null>(null);
+  const timerStartRef = useRef<number | null>(null);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -65,17 +65,31 @@ const TaskItem: React.FC<TaskItemProps> = ({
   };
 
   const startTimer = () => {
+    console.log('Starting timer for task:', task.title);
     setIsTimerRunning(true);
-    setTimerStart(Date.now());
+    timerStartRef.current = Date.now();
   };
 
   const stopTimer = () => {
-    if (timerStart) {
-      const timeSpent = Math.round((Date.now() - timerStart) / 60000); // Convert to minutes
-      onUpdateTime(task.id, timeSpent);
+    console.log('Stopping timer for task:', task.title);
+    if (timerStartRef.current) {
+      const timeSpent = Math.round((Date.now() - timerStartRef.current) / 60000); // Convert to minutes
+      console.log('Time spent:', timeSpent, 'minutes');
+      if (timeSpent > 0) {
+        onUpdateTime(task.id, timeSpent);
+      }
     }
     setIsTimerRunning(false);
-    setTimerStart(null);
+    timerStartRef.current = null;
+  };
+
+  const handleTimerToggle = () => {
+    console.log('Timer toggle clicked for task:', task.title, 'Current state:', isTimerRunning);
+    if (isTimerRunning) {
+      stopTimer();
+    } else {
+      startTimer();
+    }
   };
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
@@ -124,7 +138,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={isTimerRunning ? stopTimer : startTimer}
+                onClick={handleTimerToggle}
                 className={cn(
                   "h-8 w-8 p-0",
                   isTimerRunning && "bg-green-100 text-green-600"
