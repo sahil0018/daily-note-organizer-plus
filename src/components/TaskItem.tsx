@@ -68,17 +68,27 @@ const TaskItem: React.FC<TaskItemProps> = ({
     console.log('Starting timer for task:', task.title);
     setIsTimerRunning(true);
     timerStartRef.current = Date.now();
+    console.log('Timer start time set to:', timerStartRef.current);
   };
 
   const stopTimer = () => {
     console.log('Stopping timer for task:', task.title);
+    console.log('Timer start ref:', timerStartRef.current);
+    
     if (timerStartRef.current) {
-      const timeSpent = Math.round((Date.now() - timerStartRef.current) / 60000); // Convert to minutes
-      console.log('Time spent:', timeSpent, 'minutes');
-      if (timeSpent > 0) {
-        onUpdateTime(task.id, timeSpent);
-      }
+      const timeSpentMs = Date.now() - timerStartRef.current;
+      const timeSpentMinutes = Math.max(1, Math.round(timeSpentMs / 60000)); // At least 1 minute, convert to minutes
+      
+      console.log('Time spent in ms:', timeSpentMs);
+      console.log('Time spent in minutes:', timeSpentMinutes);
+      console.log('Current task time spent:', task.timeSpent);
+      
+      onUpdateTime(task.id, timeSpentMinutes);
+      console.log('Called onUpdateTime with:', task.id, timeSpentMinutes);
+    } else {
+      console.log('No timer start time found');
     }
+    
     setIsTimerRunning(false);
     timerStartRef.current = null;
   };

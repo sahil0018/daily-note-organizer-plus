@@ -73,9 +73,21 @@ const TodoApp = () => {
   };
 
   const updateTaskTime = (taskId: string, additionalTime: number) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId ? { ...task, timeSpent: task.timeSpent + additionalTime } : task
-    ));
+    console.log('updateTaskTime called with:', taskId, additionalTime);
+    
+    setTasks(prev => {
+      const newTasks = prev.map(task => {
+        if (task.id === taskId) {
+          const updatedTask = { ...task, timeSpent: task.timeSpent + additionalTime };
+          console.log('Updating task time:', task.title, 'from', task.timeSpent, 'to', updatedTask.timeSpent);
+          return updatedTask;
+        }
+        return task;
+      });
+      
+      console.log('Tasks after time update:', newTasks.find(t => t.id === taskId)?.timeSpent);
+      return newTasks;
+    });
   };
 
   // Drag and drop handlers
