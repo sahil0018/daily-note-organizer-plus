@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Check, Edit, Trash, Clock, User, Calendar, Star, Camera, Tag, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,8 @@ interface TaskItemProps {
   onDragStart: (taskId: string) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, taskId: string) => void;
+  isSelected?: boolean;
+  onSelect?: (taskId: string, selected: boolean) => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
@@ -28,6 +29,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onDragStart,
   onDragOver,
   onDrop,
+  isSelected = false,
+  onSelect,
 }) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerStartRef = useRef<number | null>(null);
@@ -109,7 +112,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
       className={cn(
         "transition-all duration-200 hover:shadow-md cursor-move",
         task.completed && "opacity-70",
-        isOverdue && "border-red-300 bg-red-50"
+        isOverdue && "border-red-300 bg-red-50",
+        isSelected && "ring-2 ring-blue-500 bg-blue-50"
       )}
       draggable
       onDragStart={() => onDragStart(task.id)}
@@ -121,6 +125,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {/* Header with title and actions */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 flex-1">
+              {onSelect && (
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => onSelect(task.id, checked as boolean)}
+                  className="mt-0.5"
+                />
+              )}
               <Checkbox
                 checked={task.completed}
                 onCheckedChange={() => onToggleComplete(task.id)}

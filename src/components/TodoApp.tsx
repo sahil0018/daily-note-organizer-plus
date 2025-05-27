@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Calendar, User, Camera, Clock, Star } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Filter, Calendar, User, Camera, Clock, Star, BarChart3, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TaskItem from './TaskItem';
 import TaskForm from './TaskForm';
+import DarkModeToggle from './DarkModeToggle';
+import BulkActions from './BulkActions';
+import TaskTemplates from './TaskTemplates';
+import TaskAnalytics from './TaskAnalytics';
+import ExportImport from './ExportImport';
+import KeyboardShortcuts from './KeyboardShortcuts';
 
 export interface Task {
   id: string;
@@ -32,6 +39,12 @@ const TodoApp = () => {
   const [filterPriority, setFilterPriority] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'createdAt' | 'dueDate' | 'priority' | 'timeSpent'>('createdAt');
+  const [activeTab, setActiveTab] = useState('tasks');
+  
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Load tasks from localStorage on mount
   useEffect(() => {
@@ -59,6 +72,23 @@ const TodoApp = () => {
       console.log('Task:', task.id, task.title);
     });
   }, [tasks]);
+
+  // Dark mode effect
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode');
+    if (savedDarkMode) {
+      setIsDarkMode(JSON.parse(savedDarkMode));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   const addTask = (newTask: Omit<Task, 'id' | 'createdAt'>) => {
     console.log('Adding new task:', newTask.title);
@@ -127,6 +157,67 @@ const TodoApp = () => {
     });
   };
 
+  // Bulk operations
+  const handleBulkDelete = () => {
+    setTasks(prev => prev.filter(task => !selectedTasks.includes(task.id)));
+    setSelectedTasks([]);
+  };
+
+  const handleBulkComplete = () => {
+    setTasks(prev => prev.map(task => 
+      selectedTasks.includes(task.id) ? { ...task, completed: true } : task
+    ));
+    setSelectedTasks([]);
+  };
+
+  const handleBulkUncomplete = () => {
+    setTasks(prev => prev.map(task => 
+      selectedTasks.includes(task.id) ? { ...task, completed: false } : task
+    ));
+    setSelectedTasks([]);
+  };
+
+  const handleTaskSelection = (taskId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedTasks(prev => [...prev, taskId]);
+    } else {
+      setSelectedTasks(prev => prev.filter(id => id !== taskId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTasks.length === filteredTasks.length) {
+      setSelectedTasks([]);
+    } else {
+      setSelectedTasks(filteredTasks.map(task => task.id));
+    }
+  };
+
+  // Template usage
+  const handleUseTemplate = (template: any) => {
+    const newTask: Omit<Task, 'id' | 'createdAt'> = {
+      title: template.name,
+      description: template.description,
+      completed: false,
+      priority: template.priority,
+      category: template.category,
+      createdBy: 'You',
+      photos: [],
+      timeSpent: 0,
+      tags: template.tags,
+    };
+    addTask(newTask);
+  };
+
+  const handleImportTasks = (importedTasks: Task[]) => {
+    setTasks(prev => [...prev, ...importedTasks]);
+  };
+
+  const handleKeyboardShortcuts = {
+    onNewTask: () => setShowTaskForm(true),
+    onToggleSearch: () => searchInputRef.current?.focus(),
+  };
+
   // Drag and drop handlers
   const handleDragStart = (taskId: string) => {
     console.log('Drag started for task:', taskId);
@@ -166,29 +257,45 @@ const TodoApp = () => {
   };
 
   // Filter tasks with debugging
-  const filteredTasks = tasks.filter(task => {
-    console.log('Filtering task:', task.title, 'Search term:', searchTerm);
-    
-    const matchesSearch = searchTerm === '' || 
-                         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    console.log('Search match for', task.title, ':', matchesSearch);
-    
-    const matchesStatus = filterStatus === 'all' || 
-                         (filterStatus === 'completed' && task.completed) ||
-                         (filterStatus === 'pending' && !task.completed);
-    
-    const matchesPriority = filterPriority === 'all' || task.priority === filterPriority;
-    
-    const matchesCategory = filterCategory === 'all' || task.category === filterCategory;
+  const filteredTasks = tasks
+    .filter(task => {
+      console.log('Filtering task:', task.title, 'Search term:', searchTerm);
+      
+      const matchesSearch = searchTerm === '' || 
+                           task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           task.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      console.log('Search match for', task.title, ':', matchesSearch);
+      
+      const matchesStatus = filterStatus === 'all' || 
+                           (filterStatus === 'completed' && task.completed) ||
+                           (filterStatus === 'pending' && !task.completed);
+      
+      const matchesPriority = filterPriority === 'all' || task.priority === filterPriority;
+      const matchesCategory = filterCategory === 'all' || task.category === filterCategory;
 
-    const finalMatch = matchesSearch && matchesStatus && matchesPriority && matchesCategory;
-    console.log('Final match for', task.title, ':', finalMatch);
+      const finalMatch = matchesSearch && matchesStatus && matchesPriority && matchesCategory;
+      console.log('Final match for', task.title, ':', finalMatch);
 
-    return finalMatch;
-  });
+      return finalMatch;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'dueDate':
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        case 'timeSpent':
+          return b.timeSpent - a.timeSpent;
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
 
   console.log('Total tasks:', tasks.length, 'Filtered tasks:', filteredTasks.length, 'Search term:', searchTerm);
 
@@ -202,148 +309,211 @@ const TodoApp = () => {
   const totalTimeSpent = tasks.reduce((total, task) => total + task.timeSpent, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-900' : 'bg-gradient-to-br from-blue-50 to-indigo-100'} p-4 transition-colors duration-300`}>
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-gray-800">My Todo App</h1>
-          <p className="text-gray-600">Organize your tasks efficiently with advanced features</p>
+        <div className="flex items-center justify-between">
+          <div className="text-center space-y-2">
+            <h1 className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+              My Todo App
+            </h1>
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Organize your tasks efficiently with advanced features
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <DarkModeToggle isDark={isDarkMode} onToggle={() => setIsDarkMode(!isDarkMode)} />
+            <Button onClick={handleSelectAll} variant="outline" size="sm">
+              {selectedTasks.length === filteredTasks.length && filteredTasks.length > 0 ? 'Deselect All' : 'Select All'}
+            </Button>
+          </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{totalTasks}</div>
-              <div className="text-sm text-gray-600">Total Tasks</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{completedTasks}</div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-orange-600">{pendingTasks}</div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">{Math.round(totalTimeSpent / 60)}h</div>
-              <div className="text-sm text-gray-600">Time Spent</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Keyboard Shortcuts */}
+        <KeyboardShortcuts {...handleKeyboardShortcuts} />
 
-        {/* Controls */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Task Management</span>
-              <Button onClick={() => setShowTaskForm(true)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Task
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search tasks, descriptions, or tags..."
-                value={searchTerm}
-                onChange={(e) => {
-                  console.log('Search input changed to:', e.target.value);
-                  setSearchTerm(e.target.value);
-                }}
-                className="pl-10"
-              />
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="tasks" className="space-y-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{totalTasks}</div>
+                  <div className="text-sm text-gray-600">Total Tasks</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{completedTasks}</div>
+                  <div className="text-sm text-gray-600">Completed</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600">{pendingTasks}</div>
+                  <div className="text-sm text-gray-600">Pending</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-600">{Math.round(totalTimeSpent / 60)}h</div>
+                  <div className="text-sm text-gray-600">Time Spent</div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tasks</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Bulk Actions */}
+            <BulkActions
+              selectedTasks={selectedTasks}
+              tasks={tasks}
+              onClearSelection={() => setSelectedTasks([])}
+              onBulkDelete={handleBulkDelete}
+              onBulkComplete={handleBulkComplete}
+              onBulkUncomplete={handleBulkUncomplete}
+            />
 
-              <Select value={filterPriority} onValueChange={(value: any) => setFilterPriority(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="high">High Priority</SelectItem>
-                  <SelectItem value="medium">Medium Priority</SelectItem>
-                  <SelectItem value="low">Low Priority</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Task List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Tasks ({filteredTasks.length})
-              {filteredTasks.length !== totalTasks && (
-                <span className="text-sm font-normal text-gray-500 ml-2">
-                  (filtered from {totalTasks})
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredTasks.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <div className="text-4xl mb-4">📝</div>
-                <p>No tasks found. {totalTasks === 0 ? 'Add your first task!' : 'Try adjusting your filters.'}</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredTasks.map((task) => (
-                  <TaskItem
-                    key={task.id}
-                    task={task}
-                    onToggleComplete={toggleTaskCompletion}
-                    onEdit={(task) => {
-                      setEditingTask(task);
-                      setShowTaskForm(true);
-                    }}
-                    onDelete={deleteTask}
-                    onUpdateTime={updateTaskTime}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
+            {/* Enhanced Controls */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Task Management</span>
+                  <Button onClick={() => setShowTaskForm(true)} className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Task
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Search tasks, descriptions, or tags..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
                   />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+
+                {/* Filters and Sorting */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Filters */}
+                  <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tasks</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filterPriority} onValueChange={(value: any) => setFilterPriority(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="high">High Priority</SelectItem>
+                      <SelectItem value="medium">Medium Priority</SelectItem>
+                      <SelectItem value="low">Low Priority</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filterCategory} onValueChange={setFilterCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {categories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Sort by */}
+                  <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="createdAt">Created Date</SelectItem>
+                      <SelectItem value="dueDate">Due Date</SelectItem>
+                      <SelectItem value="priority">Priority</SelectItem>
+                      <SelectItem value="timeSpent">Time Spent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Task List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  Tasks ({filteredTasks.length})
+                  {filteredTasks.length !== tasks.length && (
+                    <span className="text-sm font-normal text-gray-500 ml-2">
+                      (filtered from {tasks.length})
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredTasks.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-4xl mb-4">📝</div>
+                    <p>No tasks found. {tasks.length === 0 ? 'Add your first task!' : 'Try adjusting your filters.'}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredTasks.map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggleComplete={toggleTaskCompletion}
+                        onEdit={(task) => {
+                          setEditingTask(task);
+                          setShowTaskForm(true);
+                        }}
+                        onDelete={deleteTask}
+                        onUpdateTime={updateTaskTime}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        isSelected={selectedTasks.includes(task.id)}
+                        onSelect={handleTaskSelection}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <TaskTemplates onUseTemplate={handleUseTemplate} />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <TaskAnalytics tasks={tasks} />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <ExportImport tasks={tasks} onImport={handleImportTasks} />
+          </TabsContent>
+        </Tabs>
 
         {/* Task Form Modal */}
         {showTaskForm && (
