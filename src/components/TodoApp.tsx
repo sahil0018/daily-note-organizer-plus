@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import TaskForm from './TaskForm';
 import DarkModeToggle from './DarkModeToggle';
 import BulkActions from './BulkActions';
@@ -36,6 +37,7 @@ const TodoApp = () => {
   const [activeTab, setActiveTab] = useState('tasks');
   
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   // Use custom hooks
   const {
@@ -92,6 +94,11 @@ const TodoApp = () => {
   const handleAddTask = (newTask: Omit<Task, 'id' | 'createdAt'>) => {
     addTask(newTask);
     setShowTaskForm(false);
+    
+    toast({
+      title: "Task Added",
+      description: `"${newTask.title}" has been added to your tasks.`,
+    });
   };
 
   const handleUpdateTask = (updatedTask: Task) => {
@@ -122,6 +129,11 @@ const TodoApp = () => {
       tags: template.tags,
     };
     addTask(newTask);
+    
+    toast({
+      title: "Template Used",
+      description: `Task "${template.name}" created from template.`,
+    });
   };
 
   // Keyboard shortcut handlers
