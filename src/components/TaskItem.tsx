@@ -37,10 +37,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'high': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600';
     }
   };
 
@@ -80,7 +80,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
     
     if (timerStartRef.current) {
       const timeSpentMs = Date.now() - timerStartRef.current;
-      const timeSpentMinutes = Math.max(1, Math.round(timeSpentMs / 60000)); // At least 1 minute, convert to minutes
+      const timeSpentMinutes = Math.max(1, Math.round(timeSpentMs / 60000));
       
       console.log('Time spent in ms:', timeSpentMs);
       console.log('Time spent in minutes:', timeSpentMinutes);
@@ -112,8 +112,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
       className={cn(
         "transition-all duration-200 hover:shadow-md cursor-move",
         task.completed && "opacity-70",
-        isOverdue && "border-red-300 bg-red-50",
-        isSelected && "ring-2 ring-blue-500 bg-blue-50"
+        isOverdue && "border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20",
+        isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20"
       )}
       draggable
       onDragStart={() => onDragStart(task.id)}
@@ -129,24 +129,24 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={(checked) => onSelect(task.id, checked as boolean)}
-                  className="mt-0.5"
+                  className="mt-0.5 dark:border-gray-400 dark:data-[state=checked]:bg-blue-600 dark:data-[state=checked]:border-blue-600"
                 />
               )}
               <Checkbox
                 checked={task.completed}
                 onCheckedChange={() => onToggleComplete(task.id)}
-                className="mt-0.5"
+                className="mt-0.5 dark:border-gray-400 dark:data-[state=checked]:bg-green-600 dark:data-[state=checked]:border-green-600"
               />
               <div className="flex-1">
                 <h3 className={cn(
-                  "text-lg font-semibold",
-                  task.completed && "line-through text-gray-500"
+                  "text-lg font-semibold dark:text-white",
+                  task.completed && "line-through text-gray-500 dark:text-gray-400"
                 )}>
                   {task.title}
                 </h3>
                 {task.description && (
                   <p className={cn(
-                    "text-gray-600 mt-1",
+                    "text-gray-600 dark:text-gray-300 mt-1",
                     task.completed && "line-through"
                   )}>
                     {task.description}
@@ -162,7 +162,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 onClick={handleTimerToggle}
                 className={cn(
                   "h-8 w-8 p-0",
-                  isTimerRunning && "bg-green-100 text-green-600"
+                  isTimerRunning && "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                 )}
               >
                 {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -171,7 +171,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onEdit(task)}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 dark:hover:bg-gray-700"
               >
                 <Edit className="w-4 h-4" />
               </Button>
@@ -179,7 +179,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => onDelete(task.id)}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
               >
                 <Trash className="w-4 h-4" />
               </Button>
@@ -194,7 +194,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                   <img
                     src={photo}
                     alt={`Task attachment ${index + 1}`}
-                    className="w-16 h-16 object-cover rounded-lg border"
+                    className="w-16 h-16 object-cover rounded-lg border dark:border-gray-600"
                   />
                 </div>
               ))}
@@ -210,7 +210,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {/* Category */}
             {task.category && (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="dark:bg-gray-700 dark:text-gray-300">
                 <Tag className="w-3 h-3 mr-1" />
                 {task.category}
               </Badge>
@@ -218,7 +218,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {/* Due Date */}
             {task.dueDate && (
-              <Badge variant={isOverdue ? "destructive" : "outline"}>
+              <Badge variant={isOverdue ? "destructive" : "outline"} className="dark:border-gray-600">
                 <Calendar className="w-3 h-3 mr-1" />
                 {formatDate(task.dueDate)}
               </Badge>
@@ -226,14 +226,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
             {/* Time Spent */}
             {task.timeSpent > 0 && (
-              <Badge variant="outline">
+              <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
                 <Clock className="w-3 h-3 mr-1" />
                 {formatTime(task.timeSpent)}
               </Badge>
             )}
 
             {/* Created By */}
-            <Badge variant="outline">
+            <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
               <User className="w-3 h-3 mr-1" />
               {task.createdBy}
             </Badge>
@@ -243,7 +243,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           {task.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {task.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
+                <Badge key={index} variant="secondary" className="text-xs dark:bg-gray-700 dark:text-gray-300">
                   #{tag}
                 </Badge>
               ))}
@@ -251,7 +251,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           )}
 
           {/* Creation Date */}
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Created on {formatDate(task.createdAt)}
           </div>
         </div>
