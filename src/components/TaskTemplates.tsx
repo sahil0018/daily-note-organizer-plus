@@ -67,10 +67,17 @@ const TaskTemplates: React.FC<TaskTemplatesProps> = ({ onUseTemplate }) => {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSuggestionsDialog, setShowSuggestionsDialog] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({
+  const [newTemplate, setNewTemplate] = useState<{
+    name: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    category: string;
+    tags: string;
+    estimatedTime: number;
+  }>({
     name: '',
     description: '',
-    priority: 'medium' as const,
+    priority: 'medium',
     category: '',
     tags: '',
     estimatedTime: 30,
