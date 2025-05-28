@@ -31,6 +31,8 @@ const TaskList: React.FC<TaskListProps> = ({
   onDrop,
   onTaskSelection
 }) => {
+  const hasSelectedTasks = selectedTasks.length > 0;
+
   return (
     <Card>
       <CardHeader>
@@ -64,6 +66,7 @@ const TaskList: React.FC<TaskListProps> = ({
                 onDrop={onDrop}
                 isSelected={selectedTasks.includes(task.id)}
                 onSelect={onTaskSelection}
+                hasSelectedTasks={hasSelectedTasks}
               />
             ))}
           </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Check, Edit, Trash, Clock, User, Calendar, Star, Camera, Tag, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ interface TaskItemProps {
   onDrop: (e: React.DragEvent, taskId: string) => void;
   isSelected?: boolean;
   onSelect?: (taskId: string, selected: boolean) => void;
+  hasSelectedTasks?: boolean; // New prop to indicate if any tasks are selected
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
@@ -31,8 +33,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onDrop,
   isSelected = false,
   onSelect,
+  hasSelectedTasks = false,
 }) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const timerStartRef = useRef<number | null>(null);
 
   const getPriorityColor = (priority: string) => {
@@ -106,6 +110,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   };
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
+  const showSelectionCheckbox = onSelect && (hasSelectedTasks || isHovered || isSelected);
 
   return (
     <Card
@@ -119,23 +124,25 @@ const TaskItem: React.FC<TaskItemProps> = ({
       onDragStart={() => onDragStart(task.id)}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, task.id)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header with title and actions */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 flex-1">
-              {onSelect && (
+              {showSelectionCheckbox && (
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={(checked) => onSelect(task.id, checked as boolean)}
-                  className="mt-0.5 dark:border-gray-400 dark:data-[state=checked]:bg-blue-600 dark:data-[state=checked]:border-blue-600"
+                  onCheckedChange={(checked) => onSelect!(task.id, checked as boolean)}
+                  className="mt-0.5"
                 />
               )}
               <Checkbox
                 checked={task.completed}
                 onCheckedChange={() => onToggleComplete(task.id)}
-                className="mt-0.5 dark:border-gray-400 dark:data-[state=checked]:bg-green-600 dark:data-[state=checked]:border-green-600"
+                className="mt-0.5"
               />
               <div className="flex-1">
                 <h3 className={cn(
