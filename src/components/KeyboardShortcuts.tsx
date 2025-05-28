@@ -11,28 +11,60 @@ interface KeyboardShortcutsProps {
 const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onNewTask, onToggleSearch }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if not typing in an input, textarea, or contenteditable element
+      const activeElement = document.activeElement;
+      const isTyping = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.getAttribute('contenteditable') === 'true'
+      );
+
+      // Skip if typing in form fields, unless it's the search shortcut
+      if (isTyping && !((e.ctrlKey || e.metaKey) && e.key === 'f')) {
+        return;
+      }
+
       // Ctrl+N or Cmd+N for new task
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();
+        e.stopPropagation();
+        console.log('New task shortcut triggered');
         onNewTask();
+        return;
       }
       
       // Ctrl+F or Cmd+F for search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
+        e.stopPropagation();
+        console.log('Search shortcut triggered');
         onToggleSearch();
+        return;
+      }
+
+      // Escape to close modals (handled by individual components)
+      if (e.key === 'Escape') {
+        console.log('Escape key pressed');
+        // This will be handled by individual modal components
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    // Add event listener to document with capture phase to ensure it runs first
+    document.addEventListener('keydown', handleKeyDown, true);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
   }, [onNewTask, onToggleSearch]);
 
   const shortcuts = [
-    { key: 'Ctrl+N', action: 'New Task' },
-    { key: 'Ctrl+F', action: 'Focus Search' },
-    { key: 'Escape', action: 'Close Modals' },
+    { key: 'Ctrl+N', mac: 'Cmd+N', action: 'New Task' },
+    { key: 'Ctrl+F', mac: 'Cmd+F', action: 'Focus Search' },
+    { key: 'Escape', mac: 'Escape', action: 'Close Modals' },
   ];
+
+  // Detect if user is on Mac
+  const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   return (
     <Card>
@@ -44,7 +76,7 @@ const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({ onNewTask, onTogg
           <div key={index} className="flex justify-between items-center text-xs">
             <span>{shortcut.action}</span>
             <Badge variant="outline" className="text-xs">
-              {shortcut.key}
+              {isMac ? shortcut.mac : shortcut.key}
             </Badge>
           </div>
         ))}

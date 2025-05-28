@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -125,9 +124,18 @@ const TodoApp = () => {
     addTask(newTask);
   };
 
-  const handleKeyboardShortcuts = {
-    onNewTask: () => setShowTaskForm(true),
-    onToggleSearch: () => searchInputRef.current?.focus(),
+  // Keyboard shortcut handlers
+  const handleNewTask = () => {
+    console.log('Opening new task form via keyboard shortcut');
+    setShowTaskForm(true);
+  };
+
+  const handleToggleSearch = () => {
+    console.log('Focusing search input via keyboard shortcut');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+      searchInputRef.current.select();
+    }
   };
 
   return (
@@ -152,7 +160,10 @@ const TodoApp = () => {
         </div>
 
         {/* Keyboard Shortcuts */}
-        <KeyboardShortcuts {...handleKeyboardShortcuts} />
+        <KeyboardShortcuts 
+          onNewTask={handleNewTask}
+          onToggleSearch={handleToggleSearch}
+        />
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -229,7 +240,7 @@ const TodoApp = () => {
         {/* Task Form Modal */}
         {showTaskForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <TaskForm
                 task={editingTask}
                 onSave={editingTask ? handleUpdateTask : handleAddTask}
