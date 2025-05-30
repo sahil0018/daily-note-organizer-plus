@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -146,7 +147,7 @@ const TodoApp = () => {
       // Clean up notifications for tasks that are no longer overdue (completed or due date changed)
       const currentOverdueIds = new Set(overdrueTasks.map(task => task.id));
       setNotifiedOverdueTasks(prev => {
-        const newSet = new Set();
+        const newSet = new Set<string>();
         prev.forEach(taskId => {
           if (currentOverdueIds.has(taskId)) {
             newSet.add(taskId);
