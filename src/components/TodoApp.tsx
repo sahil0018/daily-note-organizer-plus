@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '../hooks/useNotifications';
 import TaskForm from './TaskForm';
 import DarkModeToggle from './DarkModeToggle';
 import BulkActions from './BulkActions';
@@ -38,6 +39,7 @@ const TodoApp = () => {
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { permission, requestPermission, showNotification, isSupported } = useNotifications();
 
   // Use custom hooks
   const {
@@ -91,6 +93,13 @@ const TodoApp = () => {
     }
   }, [isDarkMode]);
 
+  // Request notification permission on first load
+  useEffect(() => {
+    if (isSupported && permission === 'default') {
+      requestPermission();
+    }
+  }, [isSupported, permission, requestPermission]);
+
   const handleAddTask = (newTask: Omit<Task, 'id' | 'createdAt'>) => {
     addTask(newTask);
     setShowTaskForm(false);
@@ -99,12 +108,24 @@ const TodoApp = () => {
       title: "Task Added",
       description: `"${newTask.title}" has been added to your tasks.`,
     });
+
+    // Show browser notification
+    showNotification('New Task Added', {
+      body: `"${newTask.title}" has been added to your tasks.`,
+      tag: 'task-added'
+    });
   };
 
   const handleUpdateTask = (updatedTask: Task) => {
     updateTask(updatedTask);
     setEditingTask(null);
     setShowTaskForm(false);
+
+    // Show notification for task updates
+    showNotification('Task Updated', {
+      body: `"${updatedTask.title}" has been updated.`,
+      tag: 'task-updated'
+    });
   };
 
   const handleSelectAll = () => {
@@ -112,6 +133,34 @@ const TodoApp = () => {
       setSelectedTasks([]);
     } else {
       setSelectedTasks(filteredTasks.map(task => task.id));
+    }
+  };
+
+  // Enhanced task completion handler with notification
+  const handleTaskCompletion = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      toggleTaskCompletion(taskId);
+      
+      const isCompleting = !task.completed;
+      if (isCompleting) {
+        showNotification('Task Completed! 🎉', {
+          body: `"${task.title}" has been marked as completed.`,
+          tag: 'task-completed'
+        });
+      }
+    }
+  };
+
+  // Enhanced task deletion with notification
+  const handleTaskDeletion = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      deleteTask(taskId);
+      showNotification('Task Deleted', {
+        body: `"${task.title}" has been deleted.`,
+        tag: 'task-deleted'
+      });
     }
   };
 
@@ -133,6 +182,12 @@ const TodoApp = () => {
     toast({
       title: "Template Used",
       description: `Task "${template.name}" created from template.`,
+    });
+
+    // Show browser notification
+    showNotification('Task Created from Template', {
+      body: `"${template.name}" has been created from template.`,
+      tag: 'template-used'
     });
   };
 
@@ -164,6 +219,17 @@ const TodoApp = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Notification Permission Button */}
+            {isSupported && permission !== 'granted' && (
+              <Button 
+                onClick={requestPermission} 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+              >
+                Enable Notifications
+              </Button>
+            )}
             <DarkModeToggle isDark={isDarkMode} onToggle={() => setIsDarkMode(!isDarkMode)} />
             <Button onClick={handleSelectAll} variant="outline" size="sm">
               {selectedTasks.length === filteredTasks.length && filteredTasks.length > 0 ? 'Deselect All' : 'Select All'}
@@ -222,12 +288,12 @@ const TodoApp = () => {
               filteredTasks={filteredTasks}
               totalTasks={tasks.length}
               selectedTasks={selectedTasks}
-              onToggleComplete={toggleTaskCompletion}
+              onToggleComplete={handleTaskCompletion}
               onEdit={(task) => {
                 setEditingTask(task);
                 setShowTaskForm(true);
               }}
-              onDelete={deleteTask}
+              onDelete={handleTaskDeletion}
               onUpdateTime={updateTaskTime}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
