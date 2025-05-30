@@ -19,7 +19,7 @@ interface TaskItemProps {
   onDrop: (e: React.DragEvent, taskId: string) => void;
   isSelected?: boolean;
   onSelect?: (taskId: string, selected: boolean) => void;
-  hasSelectedTasks?: boolean; // New prop to indicate if any tasks are selected
+  hasSelectedTasks?: boolean;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
@@ -37,6 +37,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 }) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const timerStartRef = useRef<number | null>(null);
 
   const getPriorityColor = (priority: string) => {
@@ -109,6 +110,32 @@ const TaskItem: React.FC<TaskItemProps> = ({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    console.log('Drag start for task:', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+    onDragStart(task.id);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIsDragOver(true);
+    onDragOver(e);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    console.log('Drop on task:', task.id);
+    setIsDragOver(false);
+    onDrop(e, task.id);
+  };
+
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
   const showSelectionCheckbox = onSelect && (hasSelectedTasks || isHovered || isSelected);
 
@@ -118,12 +145,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
         "transition-all duration-200 hover:shadow-md cursor-move",
         task.completed && "opacity-70",
         isOverdue && "border-red-300 bg-red-50 dark:border-red-600 dark:bg-red-900/20",
-        isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20"
+        isSelected && "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20",
+        isDragOver && "border-blue-500 bg-blue-100 dark:bg-blue-900/30"
       )}
       draggable
-      onDragStart={() => onDragStart(task.id)}
-      onDragOver={onDragOver}
-      onDrop={(e) => onDrop(e, task.id)}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

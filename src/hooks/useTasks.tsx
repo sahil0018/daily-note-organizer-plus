@@ -130,7 +130,7 @@ export const useTasks = () => {
     setTasks(prev => [...prev, ...importedTasks]);
   };
 
-  // Drag and drop handlers
+  // Improved drag and drop handlers
   const handleDragStart = (taskId: string) => {
     console.log('Drag started for task:', taskId);
     setDraggedTask(taskId);
@@ -138,33 +138,42 @@ export const useTasks = () => {
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDrop = (e: React.DragEvent, targetTaskId: string) => {
     e.preventDefault();
-    console.log('Drop event - draggedTask:', draggedTask, 'targetTaskId:', targetTaskId);
     
-    if (!draggedTask || draggedTask === targetTaskId) {
+    const draggedTaskId = e.dataTransfer.getData('text/plain') || draggedTask;
+    console.log('Drop event - draggedTaskId:', draggedTaskId, 'targetTaskId:', targetTaskId);
+    
+    if (!draggedTaskId || draggedTaskId === targetTaskId) {
       console.log('Invalid drop - same task or no dragged task');
+      setDraggedTask(null);
       return;
     }
 
-    const draggedIndex = tasks.findIndex(task => task.id === draggedTask);
-    const targetIndex = tasks.findIndex(task => task.id === targetTaskId);
+    setTasks(prevTasks => {
+      const draggedIndex = prevTasks.findIndex(task => task.id === draggedTaskId);
+      const targetIndex = prevTasks.findIndex(task => task.id === targetTaskId);
 
-    console.log('Drag indices - dragged:', draggedIndex, 'target:', targetIndex);
+      console.log('Drag indices - dragged:', draggedIndex, 'target:', targetIndex);
 
-    if (draggedIndex === -1 || targetIndex === -1) {
-      console.log('Invalid indices found');
-      return;
-    }
+      if (draggedIndex === -1 || targetIndex === -1) {
+        console.log('Invalid indices found');
+        return prevTasks;
+      }
 
-    const newTasks = [...tasks];
-    const [draggedTaskObj] = newTasks.splice(draggedIndex, 1);
-    newTasks.splice(targetIndex, 0, draggedTaskObj);
+      const newTasks = [...prevTasks];
+      const [draggedTaskObj] = newTasks.splice(draggedIndex, 1);
+      newTasks.splice(targetIndex, 0, draggedTaskObj);
 
-    console.log('Reordering tasks - before:', tasks.length, 'after:', newTasks.length);
-    setTasks(newTasks);
+      console.log('Reordering tasks - before:', prevTasks.length, 'after:', newTasks.length);
+      console.log('New order:', newTasks.map(t => t.title));
+      
+      return newTasks;
+    });
+    
     setDraggedTask(null);
   };
 
