@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -99,6 +100,48 @@ const TodoApp = () => {
       requestPermission();
     }
   }, [isSupported, permission, requestPermission]);
+
+  // Check for expired tasks
+  useEffect(() => {
+    const checkExpiredTasks = () => {
+      const now = new Date();
+      const overdrueTasks = tasks.filter(task => {
+        if (!task.dueDate || task.completed) return false;
+        const dueDate = new Date(task.dueDate);
+        return dueDate < now;
+      });
+
+      // Show notifications for overdue tasks
+      overdrueTasks.forEach(task => {
+        const daysOverdue = Math.floor((now.getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
+        
+        showNotification('Task Overdue! ⚠️', {
+          body: `"${task.title}" was due ${daysOverdue > 0 ? `${daysOverdue} day(s) ago` : 'today'}`,
+          tag: `overdue-${task.id}`,
+          requireInteraction: true
+        });
+      });
+
+      // Show toast for overdue tasks summary
+      if (overdrueTasks.length > 0) {
+        toast({
+          title: "Overdue Tasks",
+          description: `You have ${overdrueTasks.length} overdue task(s) that need attention.`,
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Check immediately if we have tasks
+    if (tasks.length > 0) {
+      checkExpiredTasks();
+    }
+
+    // Set up periodic checking (every hour)
+    const interval = setInterval(checkExpiredTasks, 60 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [tasks, showNotification, toast]);
 
   const handleAddTask = (newTask: Omit<Task, 'id' | 'createdAt'>) => {
     addTask(newTask);

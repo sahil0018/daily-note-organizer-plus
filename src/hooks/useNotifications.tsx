@@ -27,10 +27,12 @@ export const useNotifications = () => {
         ...options,
       });
 
-      // Auto close notification after 5 seconds
-      setTimeout(() => {
-        notification.close();
-      }, 5000);
+      // Auto close notification after 5 seconds unless requireInteraction is true
+      if (!options?.requireInteraction) {
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+      }
 
       return notification;
     }
