@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -37,6 +36,7 @@ const TodoApp = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks');
+  const [notifiedOverdueTasks, setNotifiedOverdueTasks] = useState<Set<string>>(new Set());
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -101,7 +101,7 @@ const TodoApp = () => {
     }
   }, [isSupported, permission, requestPermission]);
 
-  // Check for expired tasks
+  // Check for expired tasks - only notify once per task
   useEffect(() => {
     const checkExpiredTasks = () => {
       const now = new Date();
@@ -111,8 +111,11 @@ const TodoApp = () => {
         return dueDate < now;
       });
 
-      // Show notifications for overdue tasks
-      overdrueTasks.forEach(task => {
+      // Filter out tasks we've already notified about
+      const newOverdueTasks = overdrueTasks.filter(task => !notifiedOverdueTasks.has(task.id));
+
+      // Show notifications only for newly overdue tasks
+      newOverdueTasks.forEach(task => {
         const daysOverdue = Math.floor((now.getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
         
         showNotification('Task Overdue! ⚠️', {
@@ -122,18 +125,39 @@ const TodoApp = () => {
         });
       });
 
-      // Show toast for overdue tasks summary
-      if (overdrueTasks.length > 0) {
+      // Show toast only if there are new overdue tasks
+      if (newOverdueTasks.length > 0) {
         toast({
           title: "Overdue Tasks",
-          description: `You have ${overdrueTasks.length} overdue task(s) that need attention.`,
+          description: `You have ${newOverdueTasks.length} new overdue task(s) that need attention.`,
           variant: "destructive",
         });
       }
+
+      // Update the set of notified overdue tasks
+      if (newOverdueTasks.length > 0) {
+        setNotifiedOverdueTasks(prev => {
+          const newSet = new Set(prev);
+          newOverdueTasks.forEach(task => newSet.add(task.id));
+          return newSet;
+        });
+      }
+
+      // Clean up notifications for tasks that are no longer overdue (completed or due date changed)
+      const currentOverdueIds = new Set(overdrueTasks.map(task => task.id));
+      setNotifiedOverdueTasks(prev => {
+        const newSet = new Set();
+        prev.forEach(taskId => {
+          if (currentOverdueIds.has(taskId)) {
+            newSet.add(taskId);
+          }
+        });
+        return newSet;
+      });
     };
 
-    // Check immediately if we have tasks
-    if (tasks.length > 0) {
+    // Check immediately if we have tasks, but only on initial load
+    if (tasks.length > 0 && notifiedOverdueTasks.size === 0) {
       checkExpiredTasks();
     }
 
@@ -141,7 +165,7 @@ const TodoApp = () => {
     const interval = setInterval(checkExpiredTasks, 60 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [tasks, showNotification, toast]);
+  }, [tasks, showNotification, toast, notifiedOverdueTasks]);
 
   const handleAddTask = (newTask: Omit<Task, 'id' | 'createdAt'>) => {
     addTask(newTask);
