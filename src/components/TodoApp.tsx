@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -38,7 +37,6 @@ const TodoApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('tasks');
   const [notifiedOverdueTasks, setNotifiedOverdueTasks] = useState<Set<string>>(new Set());
-  const [hasCheckedInitialOverdue, setHasCheckedInitialOverdue] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -103,95 +101,87 @@ const TodoApp = () => {
     }
   }, [isSupported, permission, requestPermission]);
 
-  // Simplified overdue task checking - only check once on initial load
+  // Enhanced overdue task checking that runs whenever tasks change
   useEffect(() => {
-    const checkInitialOverdueTasks = () => {
-      console.log('Checking initial overdue tasks...');
+    const checkOverdueTasks = () => {
+      console.log('Checking for overdue tasks...');
       const now = new Date();
       const overdueTasks = tasks.filter(task => {
         if (!task.dueDate || task.completed) return false;
         const dueDate = new Date(task.dueDate);
-        return dueDate < now;
+        const isOverdue = dueDate < now;
+        console.log(`Task "${task.title}": due ${task.dueDate}, overdue: ${isOverdue}`);
+        return isOverdue;
       });
 
       console.log('Found overdue tasks:', overdueTasks.length);
 
       if (overdueTasks.length > 0) {
-        overdueTasks.forEach(task => {
-          const daysOverdue = Math.floor((now.getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
-          
-          showNotification('Task Overdue! ⚠️', {
-            body: `"${task.title}" was due ${daysOverdue > 0 ? `${daysOverdue} day(s) ago` : 'today'}`,
-            tag: `overdue-${task.id}`,
-            requireInteraction: true
+        // Only notify about tasks we haven't notified about before
+        const newOverdueTasks = overdueTasks.filter(task => !notifiedOverdueTasks.has(task.id));
+        console.log('New overdue tasks to notify:', newOverdueTasks.length);
+
+        if (newOverdueTasks.length > 0) {
+          newOverdueTasks.forEach(task => {
+            const dueDate = new Date(task.dueDate!);
+            const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            console.log('Showing notification for overdue task:', task.title);
+            
+            // Always show toast notification
+            toast({
+              title: "Task Overdue! ⚠️",
+              description: `"${task.title}" was due ${daysOverdue > 0 ? `${daysOverdue} day(s) ago` : 'today'}`,
+              variant: "destructive",
+            });
+
+            // Show browser notification if permission granted
+            if (permission === 'granted') {
+              showNotification('Task Overdue! ⚠️', {
+                body: `"${task.title}" was due ${daysOverdue > 0 ? `${daysOverdue} day(s) ago` : 'today'}`,
+                tag: `overdue-${task.id}`,
+                requireInteraction: true
+              });
+            }
           });
-        });
 
-        toast({
-          title: "Overdue Tasks",
-          description: `You have ${overdueTasks.length} overdue task(s) that need attention.`,
-          variant: "destructive",
-        });
-
-        // Mark these tasks as notified
-        setNotifiedOverdueTasks(new Set(overdueTasks.map(task => task.id)));
+          // Update notified tasks
+          setNotifiedOverdueTasks(prev => {
+            const newSet = new Set<string>(prev);
+            newOverdueTasks.forEach(task => newSet.add(task.id));
+            return newSet;
+          });
+        }
       }
-
-      setHasCheckedInitialOverdue(true);
     };
 
-    // Only check once when we have tasks and haven't checked yet
-    if (tasks.length > 0 && !hasCheckedInitialOverdue) {
-      checkInitialOverdueTasks();
+    // Check immediately when tasks change
+    if (tasks.length > 0) {
+      checkOverdueTasks();
     }
-  }, [tasks, hasCheckedInitialOverdue, showNotification, toast]);
+  }, [tasks, permission, showNotification, toast, notifiedOverdueTasks]);
 
-  // Periodic checking for new overdue tasks (every hour)
+  // Periodic checking for overdue tasks (every 5 minutes for testing, can be changed to hourly)
   useEffect(() => {
-    const checkNewOverdueTasks = () => {
-      console.log('Periodic check for new overdue tasks...');
-      const now = new Date();
-      const overdueTasks = tasks.filter(task => {
-        if (!task.dueDate || task.completed) return false;
-        const dueDate = new Date(task.dueDate);
-        return dueDate < now;
-      });
-
-      // Only notify about tasks we haven't notified about before
-      const newOverdueTasks = overdueTasks.filter(task => !notifiedOverdueTasks.has(task.id));
-
-      if (newOverdueTasks.length > 0) {
-        newOverdueTasks.forEach(task => {
-          const daysOverdue = Math.floor((now.getTime() - new Date(task.dueDate!).getTime()) / (1000 * 60 * 60 * 24));
-          
-          showNotification('Task Overdue! ⚠️', {
-            body: `"${task.title}" was due ${daysOverdue > 0 ? `${daysOverdue} day(s) ago` : 'today'}`,
-            tag: `overdue-${task.id}`,
-            requireInteraction: true
-          });
-        });
-
-        toast({
-          title: "New Overdue Tasks",
-          description: `You have ${newOverdueTasks.length} new overdue task(s).`,
-          variant: "destructive",
-        });
-
-        // Update notified tasks
+    const interval = setInterval(() => {
+      console.log('Periodic overdue task check...');
+      if (tasks.length > 0) {
+        // Force a re-check by clearing some notified tasks older than 1 day
+        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
         setNotifiedOverdueTasks(prev => {
-          const newSet = new Set(prev);
-          newOverdueTasks.forEach(task => newSet.add(task.id));
-          return newSet;
+          const filtered = new Set<string>();
+          tasks.forEach(task => {
+            if (prev.has(task.id) && new Date(task.createdAt).getTime() > oneDayAgo) {
+              filtered.add(task.id);
+            }
+          });
+          return filtered;
         });
       }
-    };
+    }, 5 * 60 * 1000); // Check every 5 minutes
 
-    // Set up periodic checking (every hour) only after initial check
-    if (hasCheckedInitialOverdue) {
-      const interval = setInterval(checkNewOverdueTasks, 60 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [tasks, notifiedOverdueTasks, hasCheckedInitialOverdue, showNotification, toast]);
+    return () => clearInterval(interval);
+  }, [tasks]);
 
   const handleAddTask = (newTask: Omit<Task, 'id' | 'createdAt'>) => {
     addTask(newTask);
@@ -244,7 +234,7 @@ const TodoApp = () => {
 
         // Remove from notified overdue tasks if it was overdue
         setNotifiedOverdueTasks(prev => {
-          const newSet = new Set(prev);
+          const newSet = new Set<string>(prev);
           newSet.delete(taskId);
           return newSet;
         });
@@ -264,7 +254,7 @@ const TodoApp = () => {
 
       // Remove from notified overdue tasks
       setNotifiedOverdueTasks(prev => {
-        const newSet = new Set(prev);
+        const newSet = new Set<string>(prev);
         newSet.delete(taskId);
         return newSet;
       });
