@@ -101,6 +101,30 @@ const TodoApp = () => {
     }
   }, [isSupported, permission, requestPermission]);
 
+  // Handle notification permission request
+  const handleNotificationRequest = async () => {
+    console.log('Notification button clicked');
+    const result = await requestPermission();
+    if (result === 'granted') {
+      toast({
+        title: "Notifications Enabled",
+        description: "You'll now receive notifications for overdue tasks and updates.",
+      });
+      
+      // Show a test notification
+      showNotification('Notifications Enabled! 🔔', {
+        body: 'You will now receive task notifications.',
+        tag: 'permission-granted'
+      });
+    } else if (result === 'denied') {
+      toast({
+        title: "Notifications Blocked",
+        description: "Notifications have been blocked. You can enable them in your browser settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Enhanced overdue task checking that runs whenever tasks change
   useEffect(() => {
     const checkOverdueTasks = () => {
@@ -319,13 +343,18 @@ const TodoApp = () => {
             {/* Notification Permission Button */}
             {isSupported && permission !== 'granted' && (
               <Button 
-                onClick={requestPermission} 
+                onClick={handleNotificationRequest} 
                 variant="outline" 
                 size="sm"
                 className="text-xs"
               >
-                Enable Notifications
+                {permission === 'denied' ? 'Notifications Blocked' : 'Enable Notifications'}
               </Button>
+            )}
+            {isSupported && permission === 'granted' && (
+              <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                🔔 Notifications On
+              </div>
             )}
             <DarkModeToggle isDark={isDarkMode} onToggle={() => setIsDarkMode(!isDarkMode)} />
             <Button onClick={handleSelectAll} variant="outline" size="sm">
